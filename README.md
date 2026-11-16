@@ -29,8 +29,5 @@ Typical results with the fixed seed (about 80% means 78 to 82% across seeds):
 | Raised and upright | yes | 0% |
 | On A and upright | no or yes | about 80% |
 
-## Before you publish
-
-Fill in the two `[YOUR WORDS HERE]` boxes near the end of the page, and edit the "What I take from it" section so it says what you think.
 
 The simulation code sits between the `SIM:START` and `SIM:END` comments, with no DOM references, so it can be loaded in Node for testing.

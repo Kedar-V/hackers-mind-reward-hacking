@@ -35,8 +35,6 @@
   --bad: #a93d2a;
   --bar: #2c5bc0;
   --bar-track: #dbe1e9;
-  --placeholder: #fff8dc;
-  --placeholder-line: #b58900;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -64,8 +62,6 @@
     --bad: #f08a76;
     --bar: #6f9cf5;
     --bar-track: #2a323d;
-    --placeholder: #2b2810;
-    --placeholder-line: #d6aa2c;
   }
 }
 
@@ -193,14 +189,7 @@ tbody tr:last-child td { border-bottom: 0; }
 .prose ul { padding-left: 1.2em; margin: 0 0 1em; }
 .prose li { margin-bottom: 0.6em; }
 
-.placeholder {
-  max-width: 42rem; margin: 0 0 18px; padding: 16px 18px;
-  background: var(--placeholder); border: 2px dashed var(--placeholder-line); border-radius: 12px;
-}
-.placeholder strong { font-family: "Instrument Sans", system-ui, sans-serif; font-weight: 600; }
-.placeholder p { margin: 6px 0 0; color: var(--muted); font-style: italic; font-size: 1rem; }
 
-footer { margin-top: 64px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.95rem; max-width: 42rem; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
@@ -317,22 +306,8 @@ footer { margin-top: 64px; padding-top: 20px; border-top: 1px solid var(--line);
   </ul>
 </section>
 
-<section aria-labelledby="mine-h">
-  <h2 id="mine-h">In my own words</h2>
-  <div class="placeholder" role="note">
-    <strong>[YOUR WORDS HERE]</strong>
-    <p>Your reaction to the block-stacking example and to Schneier’s larger argument about hacking.</p>
-  </div>
-  <div class="placeholder" role="note">
-    <strong>[YOUR WORDS HERE]</strong>
-    <p>A question or a disagreement you want to bring to the group.</p>
-  </div>
-</section>
 </main>
 
-<footer>
-  The code on this page was written with help from Claude. It uses plain HTML, CSS and JavaScript, and makes no network calls apart from the optional web fonts.
-</footer>
 </div>
 
 <script>
