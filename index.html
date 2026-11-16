@@ -1,0 +1,664 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reward hacking in a block-stacking world</title>
+<meta name="description" content="A book club reflection on Bruce Schneier’s A Hacker’s Mind, with a toy block-stacking world where you can train an agent and watch it hack its reward.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  color-scheme: light dark;
+  --bg: #e9edf2;
+  --paper: #f6f8fa;
+  --ink: #1b2330;
+  --muted: #526071;
+  --line: #d0d7e0;
+  --accent: #2c5bc0;
+  --accent-ink: #ffffff;
+  --focus: #1a56db;
+  --scene: #eef2f6;
+  --guide: #8d99a8;
+  --floor: #c9d1db;
+  --block: #3f6fd6;
+  --block-edge: #2a52ab;
+  --block-ink: #ffffff;
+  --yellow: #f4c514;
+  --teal: #2a9d8f;
+  --teal-edge: #1c776b;
+  --gray: #9aa4b0;
+  --gray-edge: #78838f;
+  --gray-ink: #1b2330;
+  --good: #1f7556;
+  --bad: #a93d2a;
+  --bar: #2c5bc0;
+  --bar-track: #dbe1e9;
+  --placeholder: #fff8dc;
+  --placeholder-line: #b58900;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111419;
+    --paper: #1a1f27;
+    --ink: #e5e9ef;
+    --muted: #a0abb9;
+    --line: #2d3541;
+    --accent: #6f9cf5;
+    --accent-ink: #0d1320;
+    --focus: #8db2ff;
+    --scene: #151a21;
+    --guide: #6c7788;
+    --floor: #2a323d;
+    --block: #5b8cf0;
+    --block-edge: #3d68c4;
+    --block-ink: #0d1320;
+    --yellow: #f6cf3d;
+    --teal: #3db8a8;
+    --teal-edge: #2a8a7d;
+    --gray: #7f8996;
+    --gray-edge: #5f6874;
+    --gray-ink: #0f1318;
+    --good: #5dcba0;
+    --bad: #f08a76;
+    --bar: #6f9cf5;
+    --bar-track: #2a323d;
+    --placeholder: #2b2810;
+    --placeholder-line: #d6aa2c;
+  }
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Newsreader", Georgia, "Times New Roman", serif;
+  font-size: 1.1875rem;
+  line-height: 1.65;
+}
+.ui, button, input, label, th, legend, .status, .readout, .log, .verdict, figcaption {
+  font-family: "Instrument Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+.wrap { max-width: 1120px; margin: 0 auto; padding: 0 16px 72px; }
+
+.skip {
+  position: absolute; left: 16px; top: -60px;
+  background: var(--accent); color: var(--accent-ink);
+  padding: 10px 14px; border-radius: 8px; z-index: 10;
+  font-family: "Instrument Sans", system-ui, sans-serif; text-decoration: none;
+}
+.skip:focus { top: 12px; }
+
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+
+header { padding: 48px 0 20px; max-width: 46rem; }
+h1 {
+  font-size: clamp(2rem, 5vw, 3.1rem);
+  line-height: 1.1; font-weight: 500; letter-spacing: -0.01em;
+  margin: 0 0 12px;
+}
+.byline { color: var(--muted); font-style: italic; margin: 0 0 20px; }
+.lede { font-size: 1.3rem; line-height: 1.55; margin: 0; }
+
+h2 { font-size: 1.75rem; line-height: 1.2; font-weight: 500; margin: 56px 0 14px; }
+h3 { font-size: 1.1rem; font-weight: 600; margin: 0 0 6px; font-family: "Instrument Sans", system-ui, sans-serif; }
+p { margin: 0 0 1em; }
+.prose { max-width: 42rem; }
+
+.demo { display: grid; gap: 20px; grid-template-columns: 1fr; margin-top: 20px; }
+@media (min-width: 900px) {
+  .demo { grid-template-columns: 340px minmax(0, 1fr); align-items: start; }
+}
+.card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 20px;
+}
+
+fieldset { border: 0; margin: 0 0 16px; padding: 0; min-width: 0; }
+legend { font-weight: 600; font-size: 1rem; padding: 0; margin-bottom: 8px; }
+.opt {
+  display: grid; grid-template-columns: 22px 1fr; gap: 2px 10px;
+  padding: 10px 12px; margin-bottom: 8px;
+  border: 1px solid var(--line); border-radius: 10px; cursor: pointer;
+  font-size: 0.95rem; line-height: 1.4;
+}
+.opt:has(input:checked) { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.opt input { margin: 3px 0 0; accent-color: var(--accent); width: 18px; height: 18px; grid-row: 1 / span 2; }
+.opt .name { font-weight: 600; }
+.opt .rule { color: var(--muted); font-size: 0.9rem; }
+.check { display: flex; align-items: center; gap: 10px; font-size: 0.95rem; margin-bottom: 18px; cursor: pointer; }
+.check input { width: 18px; height: 18px; accent-color: var(--accent); }
+
+.btns { display: flex; flex-wrap: wrap; gap: 10px; }
+button {
+  font-size: 0.95rem; font-weight: 600;
+  padding: 10px 16px; border-radius: 10px; cursor: pointer;
+  border: 1px solid var(--accent); background: transparent; color: var(--accent);
+  min-height: 44px;
+}
+button.primary { background: var(--accent); color: var(--accent-ink); }
+button:disabled { opacity: 0.45; cursor: not-allowed; }
+button:not(:disabled):hover { filter: brightness(1.08); }
+
+.status { margin: 16px 0 0; font-size: 0.92rem; color: var(--muted); min-height: 3em; line-height: 1.45; }
+
+.scene-card { padding: 14px; }
+.scene { display: block; width: 100%; height: auto; border-radius: 10px; background: var(--scene); }
+.scene .guide { stroke: var(--guide); stroke-width: 1; stroke-dasharray: 5 5; }
+.scene .guide-label { fill: var(--muted); font: 500 11px "Instrument Sans", system-ui, sans-serif; }
+.scene .floor { fill: var(--floor); }
+.scene .a-body { fill: var(--gray); stroke: var(--gray-edge); stroke-width: 2; }
+.scene .a-label { fill: var(--gray-ink); font: 600 26px "Instrument Sans", system-ui, sans-serif; }
+.scene .ledge { fill: var(--teal); stroke: var(--teal-edge); stroke-width: 2; transition: opacity 0.3s ease; }
+.scene .ledge-label { fill: var(--muted); font: 500 12px "Instrument Sans", system-ui, sans-serif; transition: opacity 0.3s ease; }
+.scene .off { opacity: 0; }
+.scene .b-body { fill: var(--block); stroke: var(--block-edge); stroke-width: 2; }
+.scene .b-face { fill: var(--yellow); }
+.scene .b-label { fill: var(--block-ink); font: 600 28px "Instrument Sans", system-ui, sans-serif; }
+.b-pos { transition: transform 0.5s ease; }
+.b-flip { transform-origin: 30px 30px; transition: transform 0.5s ease; }
+.gripper { fill: var(--muted); opacity: 0; transition: opacity 0.25s ease; }
+.gripper.on { opacity: 1; }
+
+.readout { margin: 14px 2px 0; font-size: 0.95rem; display: flex; flex-wrap: wrap; gap: 4px 22px; }
+.readout b { font-weight: 600; }
+.log {
+  margin: 10px 0 0; padding: 10px 12px; min-height: 5.5em; max-height: 14em; overflow: auto;
+  border: 1px solid var(--line); border-radius: 10px; font-size: 0.92rem; line-height: 1.5;
+  background: var(--scene);
+}
+.log p { margin: 0 0 2px; }
+.log .hint { color: var(--muted); }
+.verdict { margin: 10px 0 0; font-weight: 600; font-size: 1rem; min-height: 1.6em; }
+.verdict.good { color: var(--good); }
+.verdict.bad { color: var(--bad); }
+
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 14px; background: var(--paper); }
+table { border-collapse: collapse; width: 100%; min-width: 620px; font-size: 0.95rem; }
+caption { text-align: left; padding: 14px 16px 4px; color: var(--muted); font-size: 0.9rem; font-family: "Instrument Sans", system-ui, sans-serif; caption-side: bottom; }
+th, td { text-align: left; padding: 12px 16px; border-bottom: 1px solid var(--line); vertical-align: middle; line-height: 1.4; }
+th { font-weight: 600; font-size: 0.9rem; color: var(--muted); }
+tbody tr:last-child td { border-bottom: 0; }
+.bar-cell { min-width: 190px; }
+.bar { display: inline-block; width: 110px; height: 12px; border-radius: 6px; background: var(--bar-track); vertical-align: middle; overflow: hidden; margin-right: 10px; }
+.bar > i { display: block; height: 100%; background: var(--bar); }
+.empty { color: var(--muted); }
+.table-tools { margin-top: 12px; }
+
+.prose ul { padding-left: 1.2em; margin: 0 0 1em; }
+.prose li { margin-bottom: 0.6em; }
+
+.placeholder {
+  max-width: 42rem; margin: 0 0 18px; padding: 16px 18px;
+  background: var(--placeholder); border: 2px dashed var(--placeholder-line); border-radius: 12px;
+}
+.placeholder strong { font-family: "Instrument Sans", system-ui, sans-serif; font-weight: 600; }
+.placeholder p { margin: 6px 0 0; color: var(--muted); font-style: italic; font-size: 1rem; }
+
+footer { margin-top: 64px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.95rem; max-width: 42rem; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to the demo</a>
+<div class="wrap">
+
+<header>
+  <h1>Reward hacking in a block-stacking world</h1>
+  <p class="byline">A reflection for the AIPI 590.01 book club on Bruce Schneier’s <em>A Hacker’s Mind</em></p>
+  <p class="lede">In Part 7, Schneier describes a robot rewarded for the height of a block’s bottom face, on the theory that a block stacked on another block would score well. The robot found a cheaper way to score: it flipped the block over. Below is a toy world that rebuilds that story, so you can train an agent, watch the rule get gamed, and see what happens when we patch it.</p>
+</header>
+
+<main id="main">
+<section aria-labelledby="demo-h">
+  <h2 id="demo-h" style="margin-top:24px">Try it</h2>
+  <div class="demo">
+
+    <div class="card">
+      <form id="controls" onsubmit="return false">
+        <fieldset>
+          <legend>Reward rule, paid after every step</legend>
+          <label class="opt"><input type="radio" name="reward" value="1" checked>
+            <span class="name">Bottom-face height</span>
+            <span class="rule">Pays the height of the block’s bottom face.</span></label>
+          <label class="opt"><input type="radio" name="reward" value="2">
+            <span class="name">Raised and upright</span>
+            <span class="rule">Pays 1 if the bottom face is at height 1 or more and the block is upright, else 0.</span></label>
+          <label class="opt"><input type="radio" name="reward" value="3">
+            <span class="name">On A and upright</span>
+            <span class="rule">Pays 1 if the block is on A and upright, else 0.</span></label>
+        </fieldset>
+        <label class="check"><input type="checkbox" id="ledge"> Add a ledge, as tall as A</label>
+        <div class="btns">
+          <button type="button" id="train" class="primary">Train agent</button>
+          <button type="button" id="watch" disabled>Watch one run</button>
+        </div>
+        <p class="status" id="status" role="status" aria-live="polite">Choose a reward and train an agent.</p>
+      </form>
+    </div>
+
+    <div class="card scene-card">
+      <svg id="scene" class="scene" viewBox="0 0 640 330" role="img" aria-label="Scene with a table, block A, an optional ledge and block B. The readout below says where B is.">
+        <rect class="floor" x="0" y="260" width="640" height="70"/>
+        <g>
+          <line class="guide" x1="78" y1="260" x2="632" y2="260"/>
+          <line class="guide" x1="78" y1="200" x2="632" y2="200"/>
+          <line class="guide" x1="78" y1="140" x2="632" y2="140"/>
+          <text class="guide-label" x="10" y="264">height 0</text>
+          <text class="guide-label" x="10" y="204">height 1</text>
+          <text class="guide-label" x="10" y="144">height 2</text>
+        </g>
+        <g>
+          <rect class="a-body" x="300" y="200" width="60" height="60" rx="4"/>
+          <text class="a-label" x="330" y="240" text-anchor="middle">A</text>
+        </g>
+        <g id="ledgeShape" class="ledge off" style="opacity:0">
+          <rect x="480" y="200" width="60" height="60" rx="4"/>
+        </g>
+        <text id="ledgeLabel" class="ledge-label off" x="510" y="284" text-anchor="middle">ledge</text>
+        <g id="gripper" class="gripper">
+          <rect x="241" y="4" width="8" height="46"/>
+          <rect x="205" y="46" width="80" height="8" rx="3"/>
+        </g>
+        <g id="bPos" class="b-pos" style="transform: translate(130px, 200px)">
+          <g id="bFlip" class="b-flip" style="transform: rotate(0deg)">
+            <rect class="b-body" x="0" y="0" width="60" height="60" rx="4"/>
+            <rect class="b-face" x="2" y="52" width="56" height="6" rx="2"/>
+            <text class="b-label" x="30" y="39" text-anchor="middle">B</text>
+          </g>
+        </g>
+      </svg>
+      <div class="readout" id="readout" aria-live="polite" aria-atomic="true"></div>
+      <div class="log" id="log" role="log" aria-live="polite" aria-label="Step log"><p class="hint">The log of a run appears here.</p></div>
+      <p class="verdict" id="verdict" aria-live="polite"></p>
+    </div>
+
+  </div>
+</section>
+
+<section aria-labelledby="results-h">
+  <h2 id="results-h">What the agents learned</h2>
+  <div class="table-wrap">
+    <table>
+      <caption>Each row is one trained agent. The bar is the share of 2,000 greedy test runs that ended with B upright on A. Training again with the same settings replaces the row.</caption>
+      <thead>
+        <tr><th scope="col">Reward</th><th scope="col">Ledge</th><th scope="col">Ended upright on A</th><th scope="col">Top two final outcomes</th></tr>
+      </thead>
+      <tbody id="results"></tbody>
+    </table>
+  </div>
+  <div class="table-tools"><button type="button" id="clear">Clear results</button></div>
+</section>
+
+<section class="prose" aria-labelledby="take-h">
+  <h2 id="take-h">What I take from it</h2>
+  <p>My view is that reward hacking is partly fixable but never fully. Each patch closes one loophole, and the next rule has to be written by someone who can’t yet see the loopholes it will open. The three rewards in the demo show the pattern.</p>
+  <p><strong>Bottom-face height.</strong> This is a sensible proxy. Stacked blocks have raised bottom faces, so the rule is correlated with what I want. But the agent doesn’t care what I want, only what I pay. Flipping the block raises its bottom face by one for a cheap action that works nine times in ten, and flipping then stacking pays the most of all. After training, none of the greedy runs end upright on A. The rule did exactly what I wrote and nothing I meant, which is Schneier’s argument in miniature: a system followed its rules into an outcome nobody intended.</p>
+  <p><strong>Raised and upright.</strong> The obvious patch is to require that the block be upright. That closes the flipping hack, and without the ledge it mostly works, because the only way to be raised and upright is to be on A. Add the ledge and the loophole comes back somewhere else. The ledge is as tall as A, but placing on it works 90% of the time instead of 25%, so the agent parks the block there and collects the same reward with far less risk. The patch was right about flipping and silent about everything else that happens to be tall.</p>
+  <p><strong>On A and upright.</strong> This rule stops describing a proxy and names the goal directly. With the ledge, about 80% of greedy runs end on A upright, and the misses come from the dynamics (a 25% chance of landing on A and only twelve steps to get there), not from a loophole. That is the best case for the fixable side of my view. But I could write this rule only because I already knew what I meant, the world has eight states, and I had already seen both hacks. Real goals are rarely that easy to list, and the next gap may be one nobody has imagined. So I would call reward hacking fixable in each instance and unfixable in general.</p>
+</section>
+
+<section class="prose" aria-labelledby="leaves-h">
+  <h2 id="leaves-h">What this toy leaves out</h2>
+  <ul>
+    <li>The learner is a table. It sees the state exactly and tries every action thousands of times, so it finds the hack with a thoroughness a real system won’t always have. Real agents have noisy sensors, function approximators and limited search, which makes hacks both less predictable and harder to rule out.</li>
+    <li>I put the ledge there. In this world the loophole exists because I added it, while in real systems the surprise is that loopholes exist at all.</li>
+    <li>Every reward here is a short, exact rule I wrote by hand. Many real systems learn their rewards from human feedback, and then the people giving feedback can be gamed too.</li>
+    <li>There are no other people in this world. Schneier’s examples involve tax codes, financial markets and legal systems, where hackers have motives, defenders adapt, and the costs of a hack land on someone else.</li>
+    <li>The physics is eight states and five actions, over twelve steps, with one fixed random seed per row. The percentages are properties of this toy, not estimates of anything real.</li>
+  </ul>
+</section>
+
+<section aria-labelledby="mine-h">
+  <h2 id="mine-h">In my own words</h2>
+  <div class="placeholder" role="note">
+    <strong>[YOUR WORDS HERE]</strong>
+    <p>Your reaction to the block-stacking example and to Schneier’s larger argument about hacking.</p>
+  </div>
+  <div class="placeholder" role="note">
+    <strong>[YOUR WORDS HERE]</strong>
+    <p>A question or a disagreement you want to bring to the group.</p>
+  </div>
+</section>
+</main>
+
+<footer>
+  The code on this page was written with help from Claude. It uses plain HTML, CSS and JavaScript, and makes no network calls apart from the optional web fonts.
+</footer>
+</div>
+
+<script>
+/* SIM:START (no DOM references in this block) */
+var Sim = (function () {
+  "use strict";
+  var TABLE = 0, HAND = 1, ON_A = 2, LEDGE = 3;
+  var LOCS = ["table", "hand", "on_A", "on_ledge"];
+  var ACTIONS = ["grasp", "place_on_A", "place_on_table", "flip", "place_on_ledge"];
+  var BASE = [0, 0, 1, 1];
+  var EPISODES = 20000, STEPS = 12, GAMMA = 0.95, TESTS = 2000;
+  var ALPHA0 = 0.3, ALPHA1 = 0.01, EPS0 = 0.3, EPS1 = 0.02;
+  var NS = 8, NA = 5;
+
+  function enc(loc, flipped) { return loc * 2 + flipped; }
+  function loc(s) { return s >> 1; }
+  function flipped(s) { return s & 1; }
+  var START = enc(TABLE, 0);
+
+  function mulberry32(seed) {
+    var a = seed >>> 0;
+    return function () {
+      a = (a + 0x6D2B79F5) >>> 0;
+      var t = a;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  function bottomHeight(s) { return BASE[loc(s)] + flipped(s); }
+
+  function reward(kind, s) {
+    var h = bottomHeight(s), up = flipped(s) === 0;
+    if (kind === 1) return h;
+    if (kind === 2) return (h >= 1 && up) ? 1 : 0;
+    return (loc(s) === ON_A && up) ? 1 : 0;
+  }
+
+  function step(s, a, rng) {
+    var l = loc(s), f = flipped(s);
+    switch (a) {
+      case 0: // grasp
+        if (l !== HAND && rng() < 0.9) return enc(HAND, f);
+        return s;
+      case 1: // place_on_A
+        if (l === HAND) return rng() < 0.25 ? enc(ON_A, f) : enc(TABLE, f);
+        return s;
+      case 2: // place_on_table
+        if (l === HAND) return enc(TABLE, f);
+        return s;
+      case 3: // flip
+        if ((l === TABLE || l === HAND) && rng() < 0.9) return enc(l, 1 - f);
+        return s;
+      case 4: // place_on_ledge
+        if (l === HAND && rng() < 0.9) return enc(LEDGE, f);
+        return s;
+    }
+    return s;
+  }
+
+  function best(Q, s, nA) {
+    var b = 0, bv = Q[s * NA];
+    for (var a = 1; a < nA; a++) {
+      if (Q[s * NA + a] > bv) { bv = Q[s * NA + a]; b = a; }
+    }
+    return b; // strict > keeps the first best action on ties
+  }
+
+  function maxQ(Q, s, nA) { return Q[s * NA + best(Q, s, nA)]; }
+
+  function train(kind, ledge, seed) {
+    var nA = ledge ? 5 : 4;
+    var Q = new Float64Array(NS * NA);
+    var rng = mulberry32(seed);
+    for (var e = 0; e < EPISODES; e++) {
+      var frac = e / (EPISODES - 1);
+      var alpha = ALPHA0 + (ALPHA1 - ALPHA0) * frac;
+      var eps = EPS0 + (EPS1 - EPS0) * frac;
+      var s = START;
+      for (var t = 0; t < STEPS; t++) {
+        var a = rng() < eps ? Math.floor(rng() * nA) : best(Q, s, nA);
+        var s2 = step(s, a, rng);
+        var r = reward(kind, s2);
+        var i = s * NA + a;
+        Q[i] += alpha * (r + GAMMA * maxQ(Q, s2, nA) - Q[i]);
+        s = s2;
+      }
+    }
+    return { Q: Q, nA: nA, kind: kind, ledge: !!ledge, rng: rng };
+  }
+
+  function label(s) {
+    var names = ["on the table", "in the hand", "on A", "on the ledge"];
+    return names[loc(s)] + ", " + (flipped(s) ? "flipped" : "upright");
+  }
+
+  function evaluate(model, n) {
+    n = n || TESTS;
+    var counts = {}, hits = 0;
+    for (var k = 0; k < n; k++) {
+      var s = START;
+      for (var t = 0; t < STEPS; t++) s = step(s, best(model.Q, s, model.nA), model.rng);
+      counts[s] = (counts[s] || 0) + 1;
+      if (loc(s) === ON_A && flipped(s) === 0) hits++;
+    }
+    var list = Object.keys(counts).map(function (key) {
+      return { state: +key, label: label(+key), count: counts[key], pct: 100 * counts[key] / n };
+    }).sort(function (x, y) { return y.count - x.count || x.state - y.state; });
+    return { n: n, pctOnAUpright: 100 * hits / n, outcomes: list };
+  }
+
+  function rollout(model, seed) {
+    var rng = mulberry32(seed), s = START, out = [];
+    for (var t = 0; t < STEPS; t++) {
+      var a = best(model.Q, s, model.nA);
+      var s2 = step(s, a, rng);
+      out.push({ n: t + 1, action: a, from: s, to: s2, reward: reward(model.kind, s2) });
+      s = s2;
+    }
+    return { start: START, steps: out, final: s };
+  }
+
+  function experiment(kind, ledge, seed) {
+    var model = train(kind, ledge, seed);
+    var result = evaluate(model, TESTS);
+    return { model: model, result: result };
+  }
+
+  return {
+    LOCS: LOCS, ACTIONS: ACTIONS, START: START, STEPS: STEPS, TESTS: TESTS, EPISODES: EPISODES,
+    TABLE: TABLE, HAND: HAND, ON_A: ON_A, LEDGE: LEDGE,
+    loc: loc, flipped: flipped, bottomHeight: bottomHeight, reward: reward, label: label,
+    mulberry32: mulberry32, step: step, train: train, evaluate: evaluate,
+    rollout: rollout, experiment: experiment
+  };
+})();
+/* SIM:END */
+</script>
+
+<script>
+(function () {
+  "use strict";
+  var SEED = 590;
+  var STEP_MS = 650;
+  var $ = function (id) { return document.getElementById(id); };
+  var el = {
+    status: $("status"), train: $("train"), watch: $("watch"), ledge: $("ledge"),
+    readout: $("readout"), log: $("log"), verdict: $("verdict"),
+    bPos: $("bPos"), bFlip: $("bFlip"), gripper: $("gripper"),
+    ledgeShape: $("ledgeShape"), ledgeLabel: $("ledgeLabel"),
+    results: $("results"), clear: $("clear")
+  };
+  var POS = [[130, 200], [215, 60], [300, 140], [480, 140]]; // table, hand, on A, on ledge
+  var WHERE = ["on the table", "in the hand", "on A", "on the ledge"];
+  var REWARD_NAMES = { 1: "Bottom-face height", 2: "Raised and upright", 3: "On A and upright" };
+  var VERBS = ["grasps it", "places it on A", "places it on the table", "flips it over", "places it on the ledge"];
+
+  var trained = null, generation = 0, timer = null, runCount = 0, angle = 0, shownFlip = 0;
+  var rows = {};
+
+  function selectedReward() { return +document.querySelector('input[name="reward"]:checked').value; }
+  function fmt(p) { return p.toFixed(1) + "%"; }
+  function setStatus(t) { el.status.textContent = t; }
+
+  function draw(s) {
+    var l = Sim.loc(s), f = Sim.flipped(s);
+    el.bPos.style.transform = "translate(" + POS[l][0] + "px, " + POS[l][1] + "px)";
+    if (f !== shownFlip) { angle += 180; shownFlip = f; }
+    el.bFlip.style.transform = "rotate(" + angle + "deg)";
+    el.gripper.classList.toggle("on", l === Sim.HAND);
+    el.readout.innerHTML = "";
+    var parts = [["Location", WHERE[l]], ["Orientation", f ? "flipped" : "upright"], ["Bottom-face height", String(Sim.bottomHeight(s))]];
+    parts.forEach(function (p) {
+      var span = document.createElement("span");
+      var b = document.createElement("b");
+      b.textContent = p[0] + ": ";
+      span.appendChild(b);
+      span.appendChild(document.createTextNode(p[1]));
+      el.readout.appendChild(span);
+    });
+  }
+
+  function setLedgeVisible(on) {
+    el.ledgeShape.style.opacity = on ? "1" : "0";
+    el.ledgeLabel.style.opacity = on ? "1" : "0";
+  }
+
+  function stopPlayback() {
+    if (timer) { clearTimeout(timer); timer = null; }
+  }
+
+  function resetScene() {
+    stopPlayback();
+    draw(Sim.START);
+    el.log.innerHTML = '<p class="hint">The log of a run appears here.</p>';
+    el.verdict.textContent = "";
+    el.verdict.className = "verdict";
+  }
+
+  function logLine(text) {
+    if (el.log.querySelector(".hint")) el.log.innerHTML = "";
+    var p = document.createElement("p");
+    p.textContent = text;
+    el.log.appendChild(p);
+    el.log.scrollTop = el.log.scrollHeight;
+  }
+
+  function describe(st) {
+    var text = "Step " + st.n + ": agent " + VERBS[st.action];
+    if (st.from === st.to) text += " (no change)";
+    text += ".";
+    if (st.action === 1 && Sim.loc(st.from) === Sim.HAND && Sim.loc(st.to) === Sim.TABLE) {
+      text += " It slips and falls to the table.";
+    }
+    text += " Reward " + st.reward + ".";
+    return text;
+  }
+
+  function watch() {
+    if (!trained) return;
+    stopPlayback();
+    resetScene();
+    runCount += 1;
+    var run = Sim.rollout(trained.model, 7000 + runCount);
+    var i = 0;
+    setStatus("Watching 12 greedy steps.");
+    function tick() {
+      var st = run.steps[i];
+      draw(st.to);
+      logLine(describe(st));
+      i += 1;
+      if (i < run.steps.length) {
+        timer = setTimeout(tick, STEP_MS);
+      } else {
+        timer = null;
+        var ok = Sim.loc(run.final) === Sim.ON_A && Sim.flipped(run.final) === 0;
+        el.verdict.textContent = ok ? "This is what I meant" : "This is not what I meant";
+        el.verdict.className = "verdict " + (ok ? "good" : "bad");
+        setStatus("Run finished. B ended " + Sim.label(run.final) + ". One run is one sample, so it may differ from the table.");
+      }
+    }
+    timer = setTimeout(tick, STEP_MS);
+  }
+
+  function renderRows() {
+    var keys = Object.keys(rows).sort();
+    el.results.innerHTML = "";
+    if (!keys.length) {
+      var tr = document.createElement("tr");
+      var td = document.createElement("td");
+      td.colSpan = 4; td.className = "empty";
+      td.textContent = "No results yet. Train an agent to add a row.";
+      tr.appendChild(td); el.results.appendChild(tr);
+      return;
+    }
+    keys.forEach(function (k) {
+      var r = rows[k];
+      var tr = document.createElement("tr");
+      var top = r.outcomes.slice(0, 2).map(function (o) { return o.label + " (" + fmt(o.pct) + ")"; }).join("; ");
+      var cells = [REWARD_NAMES[r.kind], r.ledge ? "yes" : "no"];
+      cells.forEach(function (c) { var td = document.createElement("td"); td.textContent = c; tr.appendChild(td); });
+      var barTd = document.createElement("td");
+      barTd.className = "bar-cell";
+      var bar = document.createElement("span");
+      bar.className = "bar"; bar.setAttribute("aria-hidden", "true");
+      var fill = document.createElement("i");
+      fill.style.width = r.pct + "%";
+      bar.appendChild(fill);
+      barTd.appendChild(bar);
+      barTd.appendChild(document.createTextNode(fmt(r.pct)));
+      tr.appendChild(barTd);
+      var topTd = document.createElement("td");
+      topTd.textContent = top;
+      tr.appendChild(topTd);
+      el.results.appendChild(tr);
+    });
+  }
+
+  function onSettingsChange() {
+    generation += 1;
+    trained = null;
+    el.watch.disabled = true;
+    el.train.disabled = false;
+    setLedgeVisible(el.ledge.checked);
+    resetScene();
+    setStatus("Settings changed. Train the agent again to watch a run.");
+  }
+
+  function onTrain() {
+    stopPlayback();
+    resetScene();
+    var kind = selectedReward(), ledge = el.ledge.checked, gen = generation;
+    el.train.disabled = true;
+    el.watch.disabled = true;
+    setStatus("Training 20,000 episodes of 12 steps.");
+    setTimeout(function () {
+      var out = Sim.experiment(kind, ledge, SEED);
+      if (gen !== generation) return;
+      trained = { model: out.model, kind: kind, ledge: ledge };
+      rows[kind + (ledge ? "1" : "0")] = {
+        kind: kind, ledge: ledge, pct: out.result.pctOnAUpright, outcomes: out.result.outcomes
+      };
+      renderRows();
+      el.train.disabled = false;
+      el.watch.disabled = false;
+      setStatus("Trained on “" + REWARD_NAMES[kind] + "”" + (ledge ? " with the ledge" : " without the ledge") +
+        ". In " + Sim.TESTS.toLocaleString("en-US") + " greedy test runs, " + fmt(out.result.pctOnAUpright) +
+        " ended upright on A.");
+    }, 30);
+  }
+
+  document.querySelectorAll('input[name="reward"]').forEach(function (r) { r.addEventListener("change", onSettingsChange); });
+  el.ledge.addEventListener("change", onSettingsChange);
+  el.train.addEventListener("click", onTrain);
+  el.watch.addEventListener("click", watch);
+  el.clear.addEventListener("click", function () {
+    rows = {};
+    renderRows();
+    setStatus("Results cleared.");
+  });
+
+  setLedgeVisible(false);
+  draw(Sim.START);
+  renderRows();
+})();
+</script>
+</body>
+</html>
