@@ -1,33 +1,9 @@
-# Reward hacking in a block-stacking world
+In Chapter 57 of Bruce Schneier’s *A Hacker’s Mind*, an AI is asked to stack blocks. The designers measure the height of the bottom face of one block as a proxy for progress. The AI flips the block upside down, raising that face without building a stack. I recognized the pattern from a benchmark I built during my internship at GM, where I used an AutoResearch agent to find ways to speed up a LiDAR preprocessing pipeline.
 
-A book club reflection on Bruce Schneier's *A Hacker's Mind* (AIPI 590.01). A toy block-stacking world where a tabular Q-learning agent learns to hack three different reward rules.
+In an early run, the agent picked up on a property of the benchmark: some frames appeared more than once. It cached the results for those frames and reused them when the same input came up again. That reduced measured latency while preserving the outputs. Caching is a valid optimization when repeated inputs are part of the workload. Here, though, I wanted to know whether the pipeline could process a new frame faster. The first run showed that a latency improvement and a bit-for-bit output match were still compatible with two different explanations: faster preprocessing or less preprocessing.
 
-Everything lives in one file, `index.html`, written in plain HTML, CSS and JavaScript. There are no frameworks and no network calls apart from the optional Google Fonts.
+I revised the evaluation so that reusing results for repeated frames no longer counted toward the speedup. With the revised evaluation, AutoResearch found a change that reduced preprocessing latency by 42.5% while preserving bit-for-bit identical outputs on the tested inputs. The revised benchmark let me make a more specific claim about where the improvement came from.
 
-## Run it
+The upside-down block gave me a way to explain why this matters more in an automated research loop than in a one-off benchmark. If I’m reviewing a single experiment, I can look at the change and ask why the number went down. In AutoResearch, the score also determines which changes the agent keeps and builds on. A benchmark that rewards cache hits can steer the search toward better ways to reuse answers, even when the engineering question is how to compute those answers faster.
 
-Open `index.html` in a browser.
-
-## Host it on GitHub Pages
-
-1. Push this repository to GitHub.
-2. In the repository settings, open Pages and choose the `main` branch, root folder.
-3. The empty `.nojekyll` file tells Pages to serve the file as it is.
-
-## What the demo does
-
-- Trains a Q-learning agent (20,000 episodes of 12 steps, gamma 0.95, alpha decaying from 0.3 to 0.01, epsilon from 0.3 to 0.02, seeded with mulberry32).
-- Runs 2,000 greedy test episodes and reports how many end with block B upright on block A.
-- Lets you watch one greedy run step by step.
-
-Typical results with the fixed seed (about 80% means 78 to 82% across seeds):
-
-| Reward | Ledge | Upright on A |
-| --- | --- | --- |
-| Bottom-face height | no or yes | 0% |
-| Raised and upright | no | about 80% |
-| Raised and upright | yes | 0% |
-| On A and upright | no or yes | about 80% |
-
-
-The simulation code sits between the `SIM:START` and `SIM:END` comments, with no DOM references, so it can be loaded in Node for testing.
+I’d now use the caching change as a test for the evaluation itself. It should pass the correctness check, because its outputs are right. It shouldn’t earn credit for faster processing of unseen frames. That’s the practical lesson I took from Schneier: before I trust an agent to optimize a benchmark, I want to see how the benchmark scores a change that improves the number for a reason I can already explain.
